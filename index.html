@@ -521,23 +521,28 @@ ${briefRaw || '（未入力）'}
 【配信媒体】${spec.name}
 ${note ? `\n【担当者からの補足】\n${note}` : ''}
 
-以下のフォーマットで厳密に出力してください。各項目につき「与件」と「実設定」を必ず対比して記載すること。
+必ず以下のフォーマットのみで出力してください。余分な文章・見出し・記号は一切加えないこと。整合性に問題がない項目も含め、全項目を必ず出力すること。
 
----
-■項目名（例：キャンペーン名）
-与件：ブリーフに記載された指定値（未記載なら「記載なし」）
-実設定：画面から読み取った実際の値（確認不可なら「確認不可」）
-判定：OK または 要確認 または 不一致
-備考：差分・注意点があれば記載（なければこの行は省略）
----
+■キャンペーン名
+与件：（値）
+実設定：（値）
+判定：OK
+■広告グループ名
+与件：（値）
+実設定：（値）
+判定：OK
+（以下同様に続ける）
 
-照合すべき主な項目：
-キャンペーン名 / 広告グループ名 / ターゲット・セグメント / デバイス設定 / 配信期間 / 入札方式・目標値（KPI） / 予算 / 遷移先URL / 広告テキスト（見出し・説明文）/ クリエイティブ仕様
+照合する項目（画像で確認できるものはすべて出力）：
+キャンペーン名 / 広告グループ名 / 配信メディア・面 / ターゲット・セグメント / デバイス設定 / 配信期間 / 入札方式・目標値（KPI） / 予算 / 遷移先URL / 広告テキスト（見出し・説明文）/ クリエイティブ仕様
 
-全項目の照合後に、以下を出力してください：
+判定の値は必ず「OK」「要確認」「不一致」のいずれかのみ。
+差分・注意点がある場合のみ備考行を追加：
+備考：（内容）
 
+全項目の最後に以下を出力：
 【特記事項】
-差し戻しリスク・確認が必要な事項・その他運用上の注意点を記載（なければ「特になし」）`
+差し戻しリスク・確認事項・運用上の注意点（なければ「特になし」）`
     });
 
     const res = await fetch('/api/messages', {
@@ -556,13 +561,17 @@ ${note ? `\n【担当者からの補足】\n${note}` : ''}
     const aiText = data.content?.[0]?.text || '分析に失敗しました。';
 
     // --- parse structured output ---
-    const itemBlocks = aiText.split(/\n(?=■)/).map(s => s.trim()).filter(Boolean);
+    // ■で始まる各ブロックを正規表現で確実に抽出
+    const itemRegex = /■([^\n■]+)\n((?:(?!■)[\s\S])*)/g;
+    const items = [];
+    let m;
+    while ((m = itemRegex.exec(aiText)) !== null) {
+      items.push({ name: m[1].trim(), body: m[2].trim() });
+    }
 
     let okCount = 0, warnCount = 0, ngCount = 0;
-    const cardsHtml = itemBlocks.map(block => {
-      if (!block.startsWith('■')) return '';
-      const lines = block.split('\n');
-      const itemName = lines[0].replace(/^■\s*/, '').trim();
+    const cardsHtml = items.map(({ name: itemName, body }) => {
+      const lines = body.split('\n');
       const get = (key) => {
         const line = lines.find(l => l.startsWith(key));
         return line ? line.slice(key.length).trim() : '―';
