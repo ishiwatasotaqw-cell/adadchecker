@@ -113,6 +113,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .loading{animation:pulse 1.2s ease-in-out infinite;}
+
+/* 比較カード */
+.comp-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+.comp-card.ok{border-left-color:#22c97a;}
+.comp-card.warn{border-left-color:#f5a623;background:rgba(245,166,35,.03);}
+.comp-card.ng{border-left-color:#ff4f6a;background:rgba(255,79,106,.03);}
+.comp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.comp-item-name{font-size:13px;font-weight:600;color:var(--text1);}
+.comp-badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:.03em;}
+.comp-badge.ok{background:rgba(34,201,122,.12);color:#22c97a;}
+.comp-badge.warn{background:rgba(245,166,35,.14);color:#d48a10;}
+.comp-badge.ng{background:rgba(255,79,106,.12);color:#ff4f6a;}
+.comp-body{display:flex;align-items:stretch;gap:8px;}
+.comp-col{flex:1;background:var(--bg1);border-radius:7px;padding:8px 10px;min-width:0;}
+.comp-col-label{font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600;letter-spacing:.05em;}
+.comp-col-value{font-size:12px;color:var(--text1);line-height:1.6;white-space:pre-wrap;word-break:break-all;}
+.comp-arrow{color:var(--text3);font-size:15px;display:flex;align-items:center;padding:0 2px;flex-shrink:0;}
+.comp-note{margin-top:9px;font-size:11px;color:var(--text2);background:rgba(245,166,35,.07);border-radius:6px;padding:6px 10px;line-height:1.6;border-left:2px solid #f5a623;}
+.comp-section-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px;}
+.comp-special{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;}
 </style>
 </head>
 <body>
@@ -493,7 +513,7 @@ async function runStep2() {
 
     contentParts.push({
       type: 'text',
-      text: `あなたは広告運用の審査担当者です。添付の管理画面キャプチャ（${uploadedFiles.length}枚）と依頼ブリーフを照合し、差分・抜け漏れ・問題点を指摘してください。
+      text: `あなたは広告運用の審査担当者です。添付の管理画面キャプチャ（${uploadedFiles.length}枚）と依頼ブリーフを照合してください。
 
 【依頼ブリーフ（原文）】
 ${briefRaw || '（未入力）'}
@@ -501,33 +521,23 @@ ${briefRaw || '（未入力）'}
 【配信媒体】${spec.name}
 ${note ? `\n【担当者からの補足】\n${note}` : ''}
 
-画像から以下の設定値を読み取り、ブリーフと照合してください：
-- キャンペーン名・広告グループ名
-- ターゲットオーディエンス・セグメント
-- デバイス設定
-- 配信期間・スケジュール
-- 入札設定・目標値（KPI）
-- 遷移先URL
-- 広告テキスト（見出し・説明文）
-- クリエイティブ仕様（サイズ・縦横比など確認できれば）
+以下のフォーマットで厳密に出力してください。各項目につき「与件」と「実設定」を必ず対比して記載すること。
 
-評価観点：
-1. ブリーフの各指定事項が入稿内容に正しく反映されているか
-2. ブリーフにあるのに画面上で確認できない設定はないか
-3. ブリーフと矛盾する箇所はないか
-4. 差し戻しリスクがある項目があれば具体的に指摘
+---
+■項目名（例：キャンペーン名）
+与件：ブリーフに記載された指定値（未記載なら「記載なし」）
+実設定：画面から読み取った実際の値（確認不可なら「確認不可」）
+判定：OK または 要確認 または 不一致
+備考：差分・注意点があれば記載（なければこの行は省略）
+---
 
-問題なければ「ブリーフとの整合性に問題は見当たりません」と明記してください。
-結果は以下のフォーマットで出力してください：
+照合すべき主な項目：
+キャンペーン名 / 広告グループ名 / ターゲット・セグメント / デバイス設定 / 配信期間 / 入札方式・目標値（KPI） / 予算 / 遷移先URL / 広告テキスト（見出し・説明文）/ クリエイティブ仕様
 
-【読み取った設定値】
-（画像から読み取れた主要な設定を箇条書き）
+全項目の照合後に、以下を出力してください：
 
-【ブリーフとの照合結果】
-（OK / 要確認 / 不一致 を明記して各項目を評価）
-
-【差し戻しリスク・注意点】
-（問題があれば具体的に、なければ「なし」）`
+【特記事項】
+差し戻しリスク・確認が必要な事項・その他運用上の注意点を記載（なければ「特になし」）`
     });
 
     const res = await fetch('/api/messages', {
@@ -545,40 +555,75 @@ ${note ? `\n【担当者からの補足】\n${note}` : ''}
     }
     const aiText = data.content?.[0]?.text || '分析に失敗しました。';
 
-    // parse result sections
-    const hasIssue = aiText.includes('不一致') || aiText.includes('要確認') || aiText.includes('差し戻し') || aiText.includes('リスク');
-    const status = hasIssue ? 'warn' : 'ok';
-    const label = hasIssue ? '要確認項目があります' : 'ブリーフとの整合性に問題なし';
+    // --- parse structured output ---
+    const itemBlocks = aiText.split(/\n(?=■)/).map(s => s.trim()).filter(Boolean);
 
-    // Format output sections
-    const sections = aiText.split(/【/).filter(Boolean).map(s => {
-      const titleEnd = s.indexOf('】');
-      if (titleEnd === -1) return {title: '', body: s.trim()};
-      return { title: s.slice(0, titleEnd), body: s.slice(titleEnd + 1).trim() };
-    });
+    let okCount = 0, warnCount = 0, ngCount = 0;
+    const cardsHtml = itemBlocks.map(block => {
+      if (!block.startsWith('■')) return '';
+      const lines = block.split('\n');
+      const itemName = lines[0].replace(/^■\s*/, '').trim();
+      const get = (key) => {
+        const line = lines.find(l => l.startsWith(key));
+        return line ? line.slice(key.length).trim() : '―';
+      };
+      const brief  = get('与件：');
+      const actual = get('実設定：');
+      const judge  = get('判定：');
+      const note   = get('備考：');
 
-    const sectionsHtml = sections.map(s => {
-      if (!s.title) return `<div class="ai-block"><div class="ai-text">${s.body}</div></div>`;
-      const isIssue = s.title.includes('差し戻し') || s.title.includes('注意');
-      const isOk = s.title.includes('照合') && !hasIssue;
-      return `<div class="check-item ${isIssue && hasIssue ? 'warn' : isOk ? 'ok' : ''}">
-        <div class="check-content">
-          <div class="ci-name">${s.title}</div>
-          <div class="ci-detail">${s.body}</div>
-        </div>
-      </div>`;
+      let cls = 'ok', badgeCls = 'ok', badgeLabel = 'OK';
+      if (judge.includes('不一致')) { cls = 'ng'; badgeCls = 'ng'; badgeLabel = '不一致'; ngCount++; }
+      else if (judge.includes('要確認')) { cls = 'warn'; badgeCls = 'warn'; badgeLabel = '要確認'; warnCount++; }
+      else { okCount++; }
+
+      const noteHtml = (note && note !== '―')
+        ? `<div class="comp-note">⚠ ${note}</div>` : '';
+
+      return `
+        <div class="comp-card ${cls}">
+          <div class="comp-header">
+            <div class="comp-item-name">${itemName}</div>
+            <div class="comp-badge ${badgeCls}">${badgeLabel}</div>
+          </div>
+          <div class="comp-body">
+            <div class="comp-col">
+              <div class="comp-col-label">与件</div>
+              <div class="comp-col-value">${brief}</div>
+            </div>
+            <div class="comp-arrow">→</div>
+            <div class="comp-col">
+              <div class="comp-col-label">実設定</div>
+              <div class="comp-col-value">${actual}</div>
+            </div>
+          </div>
+          ${noteHtml}
+        </div>`;
     }).join('');
 
+    // 特記事項
+    const specialMatch = aiText.match(/【特記事項】([\s\S]*?)$/);
+    const specialText = specialMatch ? specialMatch[1].trim() : '';
+    const specialHtml = (specialText && specialText !== '特になし')
+      ? `<div class="comp-section-label">特記事項</div><div class="comp-special">${specialText}</div>` : '';
+
+    const hasIssue = ngCount > 0 || warnCount > 0;
+    const summaryStatus = ngCount > 0 ? 'error' : hasIssue ? 'warn' : 'ok';
+    const label = ngCount > 0 ? '不一致・要修正項目があります'
+                : warnCount > 0 ? '要確認項目があります'
+                : 'ブリーフとの整合性に問題なし';
+
     resultEl.innerHTML = `
-      <div class="check-summary ${status}" style="margin-bottom:16px">
-        <div class="cs-dot ${status}"></div>
+      <div class="check-summary ${summaryStatus}" style="margin-bottom:16px">
+        <div class="cs-dot ${summaryStatus}"></div>
         <div>
           <div class="cs-title">${label}</div>
-          <div class="cs-sub">${spec.name} / ${uploadedFiles.length}枚のキャプチャを分析 / ${new Date().toLocaleString('ja-JP')}</div>
+          <div class="cs-sub">${spec.name} / ${uploadedFiles.length}枚 / OK:${okCount} 要確認:${warnCount} 不一致:${ngCount} / ${new Date().toLocaleString('ja-JP')}</div>
         </div>
       </div>
-      <div class="sec-label" style="margin-top:0">AI照合結果 <span class="ai-badge">AI</span></div>
-      ${sectionsHtml}`;
+      <div class="comp-section-label">与件 → 実設定 照合結果 <span class="ai-badge">AI</span></div>
+      ${cardsHtml}
+      ${specialHtml}`;
 
   } catch(e) {
     resultEl.innerHTML = `<div class="check-item error"><span class="ci-icon">✕</span><div><div class="ci-name">分析エラー</div><div class="ci-detail">${e.message}</div></div></div>`;
