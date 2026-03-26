@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入稿アシスタント</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;--bg2:#171b26;--bg3:#1e2333;--bg4:#242840;
+  --border:#2a2f42;--border2:#3a4060;
+  --text:#e8eaf2;--text2:#8b91a8;--text3:#555c75;
+  --accent:#4f7bff;--accent2:#3d64e0;
+  --success:#22c97a;--warn:#f5a623;--error:#ff4f6a;
+  --google:#4285F4;--meta:#0082FB;
+  --font:'Noto Sans JP',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;}
+
+/* STEP NAV */
+.step-nav{display:flex;align-items:center;padding:20px 32px;border-bottom:1px solid var(--border);gap:0;}
+.step-item{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 16px;border-radius:8px;transition:background .15s;flex:1;max-width:260px;}
+.step-item:hover{background:rgba(255,255,255,.04);}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:500;border:1.5px solid var(--border);color:var(--text3);flex-shrink:0;transition:all .2s;}
+.step-num.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.step-num.done{background:var(--success);border-color:var(--success);color:#fff;}
+.step-label{font-size:13px;font-weight:500;color:var(--text3);transition:color .2s;}
+.step-label.active{color:var(--text);}
+.step-label.done{color:var(--success);}
+.step-divider{flex:0 0 40px;height:1px;background:var(--border);margin:0 4px;}
+
+/* MAIN LAYOUT */
+.main{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 69px);}
+.pane{padding:28px;overflow-y:auto;}
+.pane-left{border-right:1px solid var(--border);}
+
+/* PANELS */
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* TYPOGRAPHY */
+.pane-title{font-size:16px;font-weight:700;margin-bottom:4px;}
+.pane-sub{font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.sec-label{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;margin-top:20px;display:flex;align-items:center;gap:8px;}
+.sec-note{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0;text-transform:none;}
+
+/* FORM ELEMENTS */
+.media-row{display:flex;gap:8px;margin-bottom:4px;}
+.media-btn{flex:1;padding:10px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--font);}
+.media-btn.active.google{border-color:var(--google);color:var(--google);background:rgba(66,133,244,.08);}
+.media-btn.active.meta{border-color:var(--meta);color:var(--meta);background:rgba(0,130,251,.08);}
+.media-btn:hover{border-color:var(--border2);}
+.fmt-paste{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:12px;font-family:var(--mono);padding:14px;resize:vertical;outline:none;transition:border-color .15s;line-height:1.8;min-height:200px;}
+.fmt-paste:focus{border-color:var(--accent);}
+.fmt-paste::placeholder{color:var(--text3);font-family:var(--font);font-size:12px;line-height:1.8;}
+.parsed-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:22px;}
+.pbadge{font-size:10px;padding:2px 7px;border-radius:4px;font-family:var(--mono);border:1px solid;}
+.pbadge.found{background:rgba(79,123,255,.1);border-color:rgba(79,123,255,.3);color:#7fa3ff;}
+.pbadge.missing{background:rgba(255,79,106,.06);border-color:rgba(255,79,106,.2);color:#ff7a8e;}
+
+/* BUTTONS */
+.primary-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:background .15s,transform .1s;margin-top:12px;}
+.primary-btn:hover{background:var(--accent2);}
+.primary-btn:active{transform:scale(.98);}
+.primary-btn:disabled{background:var(--bg3);color:var(--text3);cursor:not-allowed;}
+.next-btn{width:100%;padding:12px;background:var(--success);color:#022a16;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:opacity .15s;margin-top:12px;display:none;}
+.next-btn:hover{opacity:.9;}
+
+/* RESULT CARDS */
+.result-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--text3);}
+.result-empty-icon{font-size:32px;margin-bottom:10px;opacity:.35;}
+.result-empty-text{font-size:13px;line-height:1.7;}
+
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.spec-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.spec-card-title{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase;}
+.spec-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;font-size:12px;}
+.spec-key{color:var(--text2);}
+.spec-val{font-family:var(--mono);font-size:11px;color:var(--text);text-align:right;}
+.spec-val.warn{color:var(--warn);}
+.spec-val.ok{color:var(--success);}
+
+.entry-block{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.entry-block-title{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.entry-tag{font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:3px;border:1px solid;background:rgba(79,123,255,.1);border-color:rgba(79,123,255,.3);color:#7fa3ff;}
+.entry-val{font-size:13px;color:var(--text);line-height:1.6;}
+.entry-val.empty{color:var(--text3);font-style:italic;}
+
+.ai-block{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.ai-block-title{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ai-badge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;background:rgba(79,123,255,.15);border:1px solid rgba(79,123,255,.3);color:var(--accent);}
+.ai-text{font-size:13px;color:var(--text2);line-height:1.8;white-space:pre-wrap;}
+
+/* CHECK RESULTS */
+.check-summary{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;margin-bottom:16px;border:1px solid;}
+.check-summary.ok{background:rgba(34,201,122,.06);border-color:rgba(34,201,122,.25);}
+.check-summary.warn{background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.25);}
+.check-summary.error{background:rgba(255,79,106,.06);border-color:rgba(255,79,106,.25);}
+.cs-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.cs-dot.ok{background:var(--success);box-shadow:0 0 8px rgba(34,201,122,.4);}
+.cs-dot.warn{background:var(--warn);box-shadow:0 0 8px rgba(245,166,35,.4);}
+.cs-dot.error{background:var(--error);box-shadow:0 0 8px rgba(255,79,106,.4);}
+.cs-title{font-size:14px;font-weight:700;}
+.cs-sub{font-size:12px;color:var(--text2);}
+.check-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;}
+.check-item.ok{border-color:rgba(34,201,122,.2);}
+.check-item.warn{border-color:rgba(245,166,35,.25);background:rgba(245,166,35,.04);}
+.check-item.error{border-color:rgba(255,79,106,.25);background:rgba(255,79,106,.04);}
+.ci-icon{font-size:13px;flex-shrink:0;margin-top:1px;}
+.ci-name{font-size:13px;font-weight:500;margin-bottom:3px;}
+.ci-detail{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.loading{animation:pulse 1.2s ease-in-out infinite;}
+</style>
+</head>
+<body>
+
+<!-- STEP NAV -->
+<div class="step-nav">
+  <div class="step-item" onclick="goStep(1)">
+    <div class="step-num active" id="snum1">1</div>
+    <div>
+      <div class="step-label active" id="slabel1">入稿準備</div>
+      <div style="font-size:11px;color:var(--text3)">FMT解析 → 入稿設定展開</div>
+    </div>
+  </div>
+  <div class="step-divider"></div>
+  <div class="step-item" onclick="goStep(2)">
+    <div class="step-num" id="snum2">2</div>
+    <div>
+      <div class="step-label" id="slabel2">入稿後チェック</div>
+      <div style="font-size:11px;color:var(--text3)">入稿内容 × ブリーフ照合</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANE -->
+  <div class="pane pane-left">
+
+    <!-- STEP1 LEFT -->
+    <div class="panel active" id="p1-left">
+      <div class="pane-title">依頼ブリーフを入力</div>
+      <div class="pane-sub">受け取った依頼FMTをそのまま貼り付けてください。入稿に必要な設定項目と媒体規定を自動で展開します。</div>
+
+      <div class="sec-label">配信媒体</div>
+      <div class="media-row">
+        <button class="media-btn active google" id="m-google" onclick="setMedia('google')">Google 広告</button>
+        <button class="media-btn" id="m-meta" onclick="setMedia('meta')">Meta 広告</button>
+      </div>
+
+      <div class="sec-label">依頼FMT <span class="sec-note">そのまま貼り付け</span></div>
+      <textarea class="fmt-paste" id="brief-input" oninput="parseBrief(this.value)" placeholder="【広告主社名と商品/サービス名】
+　広告主　：
+　サービス：
+【想定利用メディア】
+【広告手法】
+【参考URL】
+【遷移先URL】
+【指定セグメント】
+【デバイス指定】
+【代理店or直営業】
+【売価】
+【配信原価】
+【配信期間】
+【KPI】
+【戻し希望日】
+【バナー制作希望】
+【その他補足情報】"></textarea>
+      <div class="parsed-row" id="brief-badges">
+        <span style="font-size:11px;color:var(--text3)">貼り付けると項目を自動認識します</span>
+      </div>
+
+      <button class="primary-btn" id="btn-analyze" onclick="runStep1()">入稿設定を展開する →</button>
+    </div>
+
+    <!-- STEP2 LEFT -->
+    <div class="panel" id="p2-left">
+      <div class="pane-title">管理画面のスクリーンショットをアップロード</div>
+      <div class="pane-sub">管理画面をキャプチャしてそのままアップロードしてください。PNG・JPG・PDF 対応。複数枚まとめてもOKです。</div>
+
+      <div class="sec-label">推奨キャプチャ箇所 <span class="sec-note">どちらか一方でも可</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:500;color:#0082FB;margin-bottom:6px">Meta</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.7">広告セット編集画面<br>（ターゲット・予算・期間）<br>＋ 広告編集画面<br>（テキスト・URL）</div>
+        </div>
+        <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:500;color:#4285F4;margin-bottom:6px">Google</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.7">広告グループ編集画面<br>（ターゲット・入札）<br>＋ 広告とアセット画面<br>（見出し・説明文・URL）</div>
+        </div>
+      </div>
+
+      <div class="sec-label">ファイルアップロード</div>
+      <div id="upload-zone" style="border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--bg2)"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(79,123,255,.05)'"
+        ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg2)'"
+        ondrop="handleDrop(event)">
+        <div style="font-size:28px;opacity:.4;margin-bottom:10px">+</div>
+        <div style="font-size:13px;color:var(--text2)">クリックまたはドラッグ&ドロップ</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">PNG / JPG / PDF　複数ファイル可</div>
+      </div>
+      <input type="file" id="file-input" accept="image/*,.pdf" multiple style="display:none" onchange="handleFiles(this.files)">
+
+      <div id="preview-area" style="margin-top:12px;display:none">
+        <div class="sec-label">アップロード済みファイル</div>
+        <div id="preview-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <div class="sec-label">補足メモ <span class="sec-note">任意 — 気になる点があれば</span></div>
+      <textarea class="fmt-paste" id="submission-note" style="min-height:70px" placeholder="例：広告セットのターゲット設定が正しいか特に確認したい、など"></textarea>
+
+      <button class="primary-btn" id="btn-check" onclick="runStep2()" disabled>ファイルをアップロードしてください</button>
+      <button style="display:block;width:100%;padding:12px;background:var(--bg3);color:var(--text2);border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;margin-top:8px" onclick="goStep(1)">← Step 1 に戻る</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANE -->
+  <div class="pane">
+
+    <!-- STEP1 RIGHT -->
+    <div class="panel active" id="p1-right">
+      <div class="result-empty" id="p1-empty">
+        <div class="result-empty-icon">⬡</div>
+        <div class="result-empty-text">FMTを貼り付けて<br>「入稿設定を展開する」を押してください</div>
+      </div>
+      <div id="p1-result" style="display:none"></div>
+    </div>
+
+    <!-- STEP2 RIGHT -->
+    <div class="panel" id="p2-right">
+      <div class="result-empty" id="p2-empty">
+        <div class="result-empty-icon">⬡</div>
+        <div class="result-empty-text">入稿済み内容を貼り付けて<br>「ブリーフと照合する」を押してください</div>
+      </div>
+      <div id="p2-result" style="display:none"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let currentMedia = 'google';
+let parsedData = {};
+let step1Result = null;
+
+const BRIEF_KEYS = [
+  {key:'広告主',      label:'広告主',   req:true},
+  {key:'サービス',    label:'サービス', req:true},
+  {key:'想定利用メディア', label:'メディア', req:false},
+  {key:'広告手法',    label:'広告手法', req:false},
+  {key:'遷移先URL',   label:'遷移先URL',req:true},
+  {key:'参考URL',     label:'参考URL',  req:false},
+  {key:'指定セグメント',label:'セグメント',req:false},
+  {key:'デバイス指定',label:'デバイス', req:false},
+  {key:'売価',        label:'売価',     req:false},
+  {key:'配信原価',    label:'配信原価', req:false},
+  {key:'配信期間',    label:'配信期間', req:true},
+  {key:'KPI',         label:'KPI',      req:true},
+  {key:'バナー制作希望',label:'バナー',  req:false},
+  {key:'広告手法',    label:'広告手法', req:false},
+];
+
+const MEDIA_SPECS = {
+  google: {
+    name: 'Google 広告',
+    formats: [
+      {name:'レスポンシブ検索広告', hl:'最大30文字 × 15本', desc:'最大90文字 × 4本', url:'最終URL必須'},
+      {name:'レスポンシブディスプレイ', hl:'最大30文字 × 5本', desc:'最大90文字 × 5本', img:'1200×628px 推奨 / 最大5120KB'},
+    ],
+    targeting: ['キーワード','オーディエンス（類似・リマーケティング）','カスタムインテント','デモグラフィック'],
+    bidding: ['目標CPA','目標ROAS','クリック数最大化','コンバージョン数最大化'],
+    checklist: ['コンバージョンタグ設置確認','除外キーワード設定','広告スケジュール','地域ターゲティング','デバイス入札調整']
+  },
+  meta: {
+    name: 'Meta 広告（Facebook/Instagram）',
+    formats: [
+      {name:'フィード画像', hl:'最大40文字', desc:'最大125文字', img:'1080×1080px（1:1） / 1200×628px（1.91:1）'},
+      {name:'ストーリーズ/リール', hl:'最大40文字', desc:'最大125文字', img:'1080×1920px（9:16）'},
+      {name:'動画', hl:'最大40文字', desc:'最大125文字', img:'最長240秒 / 最大4GB / H.264推奨'},
+    ],
+    targeting: ['カスタムオーディエンス（サイト訪問者）','類似オーディエンス','詳細ターゲット（興味関心）','地域・年齢・性別'],
+    bidding: ['最低コスト','コスト上限','入札上限','ROAS目標'],
+    checklist: ['Metaピクセル設置確認','カタログ連携（DPA使用時）','クリエイティブ比率確認','配信面確認（自動/手動）','キャンペーン目標設定']
+  }
+};
+
+function setMedia(m) {
+  currentMedia = m;
+  document.getElementById('m-google').className = 'media-btn' + (m==='google' ? ' active google' : '');
+  document.getElementById('m-meta').className = 'media-btn' + (m==='meta' ? ' active meta' : '');
+}
+
+function parseBriefText(text) {
+  const p = {};
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const adM = line.match(/広告主\s*[：:]\s*(.+)/);
+    if (adM && adM[1].trim()) p['広告主'] = adM[1].trim();
+    const sM = line.match(/サービス\s*[：:]\s*(.+)/);
+    if (sM && sM[1].trim()) p['サービス'] = sM[1].trim();
+    for (const {key} of BRIEF_KEYS) {
+      if (p[key]) continue;
+      const re = new RegExp('【' + key + '[^】]*】\\s*(.*)');
+      const m = line.match(re);
+      if (m) {
+        let val = m[1].trim();
+        if (!val && i+1 < lines.length && !lines[i+1].includes('【')) val = lines[i+1].trim();
+        if (val) p[key] = val;
+      }
+    }
+  }
+  return p;
+}
+
+function parseBrief(text) {
+  parsedData = parseBriefText(text);
+  if (!text.trim()) {
+    document.getElementById('brief-badges').innerHTML = '<span style="font-size:11px;color:var(--text3)">貼り付けると項目を自動認識します</span>';
+    return;
+  }
+  const badges = BRIEF_KEYS.filter((k,i,a)=>a.findIndex(x=>x.key===k.key)===i).map(({key,label,req})=>{
+    const found = !!parsedData[key];
+    return `<span class="pbadge ${found?'found':req?'missing':''}">${found?'✓':'–'} ${label}</span>`;
+  }).join('');
+  document.getElementById('brief-badges').innerHTML = badges;
+}
+
+function goStep(n) {
+  document.getElementById('p1-left').className  = 'panel' + (n===1?' active':'');
+  document.getElementById('p1-right').className = 'panel' + (n===1?' active':'');
+  document.getElementById('p2-left').className  = 'panel' + (n===2?' active':'');
+  document.getElementById('p2-right').className = 'panel' + (n===2?' active':'');
+  ['1','2'].forEach(i => {
+    const num = document.getElementById('snum'+i);
+    const lbl = document.getElementById('slabel'+i);
+    const isActive = String(n) === i;
+    const isDone = n > parseInt(i);
+    num.className = 'step-num' + (isActive?' active':isDone?' done':'');
+    num.textContent = isDone ? '✓' : i;
+    lbl.className = 'step-label' + (isActive?' active':isDone?' done':'');
+  });
+}
+
+async function runStep1() {
+  const briefRaw = document.getElementById('brief-input').value.trim();
+  if (!briefRaw) { alert('ブリーフを入力してください'); return; }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true; btn.textContent = '分析中...';
+
+  const spec = MEDIA_SPECS[currentMedia];
+  document.getElementById('p1-empty').style.display = 'none';
+  const resultEl = document.getElementById('p1-result');
+  resultEl.style.display = 'block';
+
+  // render spec cards immediately
+  const formatsHtml = spec.formats.map(f => `
+    <div class="spec-card">
+      <div class="spec-card-title">${f.name}</div>
+      ${f.hl ? `<div class="spec-row"><span class="spec-key">見出し</span><span class="spec-val">${f.hl}</span></div>` : ''}
+      ${f.desc ? `<div class="spec-row"><span class="spec-key">説明文</span><span class="spec-val">${f.desc}</span></div>` : ''}
+      ${f.img ? `<div class="spec-row"><span class="spec-key">クリエイティブ</span><span class="spec-val warn">${f.img}</span></div>` : ''}
+      ${f.url ? `<div class="spec-row"><span class="spec-key">URL</span><span class="spec-val">${f.url}</span></div>` : ''}
+    </div>`).join('');
+
+  const briefFields = [
+    {label:'広告主', key:'広告主'},
+    {label:'サービス', key:'サービス'},
+    {label:'遷移先URL', key:'遷移先URL'},
+    {label:'KPI', key:'KPI'},
+    {label:'配信期間', key:'配信期間'},
+    {label:'セグメント', key:'指定セグメント'},
+    {label:'デバイス', key:'デバイス指定'},
+    {label:'広告手法', key:'広告手法'},
+    {label:'売価', key:'売価'},
+    {label:'配信原価', key:'配信原価'},
+    {label:'バナー制作', key:'バナー制作希望'},
+  ].map(({label,key}) => {
+    const val = parsedData[key];
+    return `<div class="spec-row"><span class="spec-key">${label}</span><span class="spec-val ${val?'ok':''}">${val || '—'}</span></div>`;
+  }).join('');
+
+  const checklistHtml = spec.checklist.map(c =>
+    `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--text2)">
+      <span style="width:14px;height:14px;border:1px solid var(--border);border-radius:3px;flex-shrink:0;display:block"></span>${c}
+    </div>`
+  ).join('');
+
+  resultEl.innerHTML = `
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">${spec.name} — 入稿設定ガイド</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${new Date().toLocaleString('ja-JP')}</div>
+
+    <div class="sec-label">クリエイティブ規定</div>
+    <div class="spec-grid">${formatsHtml}</div>
+
+    <div class="sec-label">ブリーフから読み取った値</div>
+    <div class="entry-block"><div class="spec-card-title" style="margin-bottom:8px">確認済み項目</div>${briefFields}</div>
+
+    <div class="sec-label">ターゲティング候補</div>
+    <div class="entry-block">
+      ${spec.targeting.map(t=>`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:6px"><span style="width:4px;height:4px;border-radius:50%;background:var(--accent);display:block"></span>${t}</div>`).join('')}
+    </div>
+
+    <div class="sec-label">入札戦略オプション</div>
+    <div class="entry-block">
+      ${spec.bidding.map((b,i)=>{
+        const isMatch = parsedData['KPI'] && b.includes('CPA') && parsedData['KPI'].includes('CPA');
+        return `<div style="font-size:12px;color:${isMatch?'var(--success)':'var(--text2)'};margin-bottom:5px;display:flex;align-items:center;gap:6px">
+          <span style="width:4px;height:4px;border-radius:50%;background:${isMatch?'var(--success)':'var(--border2)'};display:block"></span>${b}${isMatch?' ← KPIに合致':''}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="sec-label">入稿前チェックリスト</div>
+    <div class="entry-block">${checklistHtml}</div>
+
+    <div class="sec-label">AIアドバイス <span class="ai-badge">AI</span></div>
+    <div class="ai-block" id="ai-advice">
+      <div class="ai-text loading" style="color:var(--text3)">ブリーフを解析してアドバイスを生成中...</div>
+    </div>`;
+
+  // AI advice
+  const prompt = `あなたは広告運用のエキスパートです。以下の依頼ブリーフと媒体情報をもとに、入稿担当者への具体的なアドバイスを日本語で出力してください。
+
+【依頼ブリーフ】
+${briefRaw}
+
+【配信媒体】${spec.name}
+
+以下の観点でアドバイスしてください：
+1. このブリーフのKPI・セグメントに対して最適な入稿設定の方針（入札戦略・ターゲティング）
+2. クリエイティブ制作時の注意点（サイズ・テキスト量・訴求軸）
+3. 見落としやすい設定・リスクポイント
+
+300文字以内で端的に、箇条書きで答えてください。`;
+
+  let aiText;
+  try {
+    aiText = await callAI(prompt);
+  } catch(e) {
+    aiText = 'エラー: ' + e.message;
+    console.error('Step1 AI error:', e);
+  }
+  const adviceEl = document.getElementById('ai-advice');
+  if (adviceEl) adviceEl.innerHTML = `<div class="ai-text">${aiText}</div>`;
+
+  step1Result = { briefRaw, parsedData: {...parsedData}, media: currentMedia };
+  btn.disabled = false; btn.textContent = '入稿設定を展開する →';
+
+  // show next step button
+  document.getElementById('p1-result').insertAdjacentHTML('beforeend',
+    `<button class="next-btn" style="display:block" onclick="goStep(2)">入稿が完了したら → Step 2 へ</button>`);
+}
+
+async function runStep2() {
+  const btn = document.getElementById('btn-check');
+  if (!uploadedFiles.length) return;
+  btn.disabled = true; btn.textContent = '照合中...';
+
+  const briefRaw = document.getElementById('brief-input').value.trim();
+  const note = document.getElementById('submission-note').value.trim();
+  const spec = MEDIA_SPECS[currentMedia];
+
+  document.getElementById('p2-empty').style.display = 'none';
+  const resultEl = document.getElementById('p2-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `<div class="ai-block"><div class="ai-text loading" style="color:var(--text3)">画像を読み取り中...</div></div>`;
+
+  try {
+    // Build content array: images first, then text prompt
+    const contentParts = [];
+
+    for (const f of uploadedFiles) {
+      if (f.type === 'application/pdf') {
+        contentParts.push({
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: f.b64 }
+        });
+      } else {
+        contentParts.push({
+          type: 'image',
+          source: { type: 'base64', media_type: f.type, data: f.b64 }
+        });
+      }
+    }
+
+    contentParts.push({
+      type: 'text',
+      text: `あなたは広告運用の審査担当者です。添付の管理画面キャプチャ（${uploadedFiles.length}枚）と依頼ブリーフを照合し、差分・抜け漏れ・問題点を指摘してください。
+
+【依頼ブリーフ（原文）】
+${briefRaw || '（未入力）'}
+
+【配信媒体】${spec.name}
+${note ? `\n【担当者からの補足】\n${note}` : ''}
+
+画像から以下の設定値を読み取り、ブリーフと照合してください：
+- キャンペーン名・広告グループ名
+- ターゲットオーディエンス・セグメント
+- デバイス設定
+- 配信期間・スケジュール
+- 入札設定・目標値（KPI）
+- 遷移先URL
+- 広告テキスト（見出し・説明文）
+- クリエイティブ仕様（サイズ・縦横比など確認できれば）
+
+評価観点：
+1. ブリーフの各指定事項が入稿内容に正しく反映されているか
+2. ブリーフにあるのに画面上で確認できない設定はないか
+3. ブリーフと矛盾する箇所はないか
+4. 差し戻しリスクがある項目があれば具体的に指摘
+
+問題なければ「ブリーフとの整合性に問題は見当たりません」と明記してください。
+結果は以下のフォーマットで出力してください：
+
+【読み取った設定値】
+（画像から読み取れた主要な設定を箇条書き）
+
+【ブリーフとの照合結果】
+（OK / 要確認 / 不一致 を明記して各項目を評価）
+
+【差し戻しリスク・注意点】
+（問題があれば具体的に、なければ「なし」）`
+    });
+
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: contentParts }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error('API error ' + res.status + ': ' + (data?.error?.message || JSON.stringify(data)));
+    }
+    const aiText = data.content?.[0]?.text || '分析に失敗しました。';
+
+    // parse result sections
+    const hasIssue = aiText.includes('不一致') || aiText.includes('要確認') || aiText.includes('差し戻し') || aiText.includes('リスク');
+    const status = hasIssue ? 'warn' : 'ok';
+    const label = hasIssue ? '要確認項目があります' : 'ブリーフとの整合性に問題なし';
+
+    // Format output sections
+    const sections = aiText.split(/【/).filter(Boolean).map(s => {
+      const titleEnd = s.indexOf('】');
+      if (titleEnd === -1) return {title: '', body: s.trim()};
+      return { title: s.slice(0, titleEnd), body: s.slice(titleEnd + 1).trim() };
+    });
+
+    const sectionsHtml = sections.map(s => {
+      if (!s.title) return `<div class="ai-block"><div class="ai-text">${s.body}</div></div>`;
+      const isIssue = s.title.includes('差し戻し') || s.title.includes('注意');
+      const isOk = s.title.includes('照合') && !hasIssue;
+      return `<div class="check-item ${isIssue && hasIssue ? 'warn' : isOk ? 'ok' : ''}">
+        <div class="check-content">
+          <div class="ci-name">${s.title}</div>
+          <div class="ci-detail">${s.body}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    resultEl.innerHTML = `
+      <div class="check-summary ${status}" style="margin-bottom:16px">
+        <div class="cs-dot ${status}"></div>
+        <div>
+          <div class="cs-title">${label}</div>
+          <div class="cs-sub">${spec.name} / ${uploadedFiles.length}枚のキャプチャを分析 / ${new Date().toLocaleString('ja-JP')}</div>
+        </div>
+      </div>
+      <div class="sec-label" style="margin-top:0">AI照合結果 <span class="ai-badge">AI</span></div>
+      ${sectionsHtml}`;
+
+  } catch(e) {
+    resultEl.innerHTML = `<div class="check-item error"><span class="ci-icon">✕</span><div><div class="ci-name">分析エラー</div><div class="ci-detail">${e.message}</div></div></div>`;
+    console.error('Step2 error:', e);
+  }
+
+  btn.disabled = false; btn.textContent = 'ブリーフと照合する →';
+}
+
+async function callAI(prompt) {
+  const res = await fetch('/api/messages', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{role: 'user', content: prompt}]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('API error ' + res.status + ': ' + (err?.error?.message || res.statusText));
+  }
+  const data = await res.json();
+  const text = data.content?.find(b => b.type === 'text')?.text;
+  if (!text) throw new Error('No text in response: ' + JSON.stringify(data).slice(0,200));
+  return text;
+}
+
+// File upload handling
+let uploadedFiles = [];
+
+function handleDrop(e) {
+  e.preventDefault();
+  const zone = document.getElementById('upload-zone');
+  zone.style.borderColor = 'var(--border)';
+  zone.style.background = 'var(--bg2)';
+  handleFiles(e.dataTransfer.files);
+}
+
+function handleFiles(fileList) {
+  const toProcess = Array.from(fileList).filter(f =>
+    f.type.startsWith('image/') || f.type === 'application/pdf'
+  );
+  if (!toProcess.length) return;
+
+  let processed = 0;
+  for (const file of toProcess) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const b64 = e.target.result.split(',')[1];
+      uploadedFiles.push({ name: file.name, type: file.type, b64, size: file.size });
+      processed++;
+      if (processed === toProcess.length) renderPreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function renderPreviews() {
+  const area = document.getElementById('preview-area');
+  const list = document.getElementById('preview-list');
+  area.style.display = 'block';
+
+  list.innerHTML = uploadedFiles.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px">
+      <div style="font-size:18px;flex-shrink:0">${f.type === 'application/pdf' ? '📄' : '🖼'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${(f.size/1024).toFixed(0)} KB</div>
+      </div>
+      <button onclick="removeFile(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px">×</button>
+    </div>`).join('');
+
+  const btn = document.getElementById('btn-check');
+  btn.disabled = false;
+  btn.textContent = 'ブリーフと照合する →';
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  if (uploadedFiles.length === 0) {
+    document.getElementById('preview-area').style.display = 'none';
+    const btn = document.getElementById('btn-check');
+    btn.disabled = true;
+    btn.textContent = 'ファイルをアップロードしてください';
+  } else {
+    renderPreviews();
+  }
+}
+</script>
+</body>
+</html>
