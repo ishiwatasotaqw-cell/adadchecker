@@ -559,6 +559,7 @@ ${note ? `\n【担当者からの補足】\n${note}` : ''}
       throw new Error('API error ' + res.status + ': ' + (data?.error?.message || JSON.stringify(data)));
     }
     const aiText = data.content?.[0]?.text || '分析に失敗しました。';
+    console.log('=== AI RAW OUTPUT ===\n', aiText);
 
     // --- parse structured output ---
     // ■で始まる各ブロックを正規表現で確実に抽出
